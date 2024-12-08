@@ -1,0 +1,310 @@
+---
+title: "Flavors of Cacao Analysis"
+author: "Leopoldine Mirtil"
+output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Data Source
+
+The data used in this analysis is from the "Flavors of Cacao" database, made publicly available by Brady Brelinski, [link here](https://flavorsofcacao.com/chocolate_database.html) and was last updated March 3, 2024 at time of analysis. It  contains the ratings of nearly 2,700 dark chocolate bars. 
+
+
+### Tasks
+
+1. Determine the total amount of chocolate bars reviewed each year 
+2. Identify the overall highest and lowest-rated chocolate bars
+3. Determine the total ingredient count
+4. Determine the companies and bean origin countries of the highest rated bars
+5. Identify the characteristics of the most recent years' highest 4-Rated chocolate bars 
+
+
+### Step 1: Import Data
+
+#### Load Library
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+#for data manipulation
+library(dplyr)
+library(lubridate)
+library(tidyr)
+library(tidyverse)
+library(readxl)
+
+#for visualizations
+library(ggplot2)
+library(RColorBrewer)
+library(wordcloud2)
+
+#for documentation/markdown
+library(knitr)
+```
+
+
+#### Import Data
+
+```{r, message=FALSE, echo=FALSE}
+cacao_df <- read_xlsx("Flavors of Cacao.xlsx", col_names=TRUE)
+```
+
+
+### Step 2 - Clean & Inspect Data
+
+#### Check for Missing/NA Values
+
+```{r}
+sapply(cacao_df, function(x) sum(is.na(x)))
+```
+
+
+#### Check for Empty Values
+
+```{r}
+sapply(cacao_df, function(x) sum(x==""))
+```
+
+
+#### Remove Data
+
+```{r}
+#remove rows w/ missing/NA values
+cacao_df <- drop_na(cacao_df)
+
+#confirm removal
+sapply(cacao_df, function(x) sum(is.na(x)))
+```
+
+
+#### Modify Ingredient Column
+
+```{r}
+#split ingredient columns: number & letters
+cacao_df <- cacao_df %>% 
+        separate(Ingredients, c('Ingredient Nums', 'Ingredients'), "-") 
+
+#change data type of ingr nums
+cacao_df$'Ingredient Nums' <- as.numeric(cacao_df$'Ingredient Nums')
+
+#trim white space from ingredient (letters)
+cacao_df$Ingredients <- str_trim(cacao_df$Ingredients)
+ 
+#create dict for ingredients 
+ingrd_dict <-  c('B'='Beans', 'S'='Sugar', 'S*'='Sweetener other than white cane or beet sugar', 
+        'C'='Cocoa Butter', 'V'='Vanilla', 'L'='Lecithin','Sa'='Salt')
+
+
+#replace ingredients letters using dictionary
+cacao_df$Ingredients <- sapply(strsplit(cacao_df$Ingredients, ',\\s?'), function(x){paste(unlist(as.list(ingrd_dict)[x]), collapse = ',')})
+```
+
+
+#### View Modified Dataframe
+
+```{r}
+str(cacao_df)
+```
+
+
+```{r, echo=FALSE}
+#export file
+write.csv(cacao_df, 'cacao_df.csv', row.names = FALSE)
+```
+
+
+### Step 3: Analysis
+
+#### Descriptive Analysis
+
+```{r}
+summary(cacao_df)
+```
+
+#### Unique Value Count of All Columns
+
+```{r}
+cacao_df %>%
+  select(`Company (Manufacturer)`, `Review Date`, `Country of Bean Origin`, `Specific Bean Origin or Bar Name`, `Cocoa Percent`) %>%
+  sapply(function(x) length(unique(x)))
+```
+
+
+#### Total Chocolate Bars Count by Rating
+
+```{r}
+cacao_df %>%
+  select(Rating) %>%
+  group_by(Rating) %>%
+  summarise(count=n()) %>%
+  arrange(desc(Rating))
+```
+
+#### Total Chocolate Bars Count by Year
+
+```{r}
+cacao_df %>%
+  select(`Review Date`) %>%
+  group_by(`Review Date`) %>%
+  summarise(totalCount=n()) %>%
+  arrange(desc(`Review Date`))
+```
+
+#### Total Ingredient Count
+
+```{r}
+cacao_df %>%
+  select(Ingredients) %>%
+  group_by(Ingredients) %>%
+  separate_longer_delim(c(Ingredients), delim=",") %>%
+  summarise(Total=n()) %>%
+  arrange(desc(Total))
+```
+
+
+#### Highest Rated Chocolate Bar(s)
+
+```{r}
+cacao_df %>%
+  select(`Specific Bean Origin or Bar Name`, Rating) %>%
+  filter(Rating == max(Rating)) %>%
+  group_by(`Specific Bean Origin or Bar Name`) %>%
+  arrange(`Specific Bean Origin or Bar Name`) %>%
+  slice_head(n=1) 
+```
+
+#### Lowest Rated Chocolate Bar(s)
+
+```{r}
+cacao_df %>%
+  select(`Specific Bean Origin or Bar Name`, Rating) %>%
+  filter(Rating == min(Rating)) 
+```
+
+#### Bean Origin Countries of 4-Rated Bars
+
+```{r}
+cacao_df %>%
+  select(`Country of Bean Origin`, Rating) %>%
+  filter(Rating == max(Rating)) %>%
+  group_by(`Country of Bean Origin`) %>%
+  summarise(count=n()) %>%
+  arrange(desc(count))
+```
+
+
+#### Companies of Highest-Rated Chocolate Bar(s)
+
+```{r, message=FALSE}
+cacao_df %>%
+  select(`Company (Manufacturer)`, Rating) %>%
+  filter(Rating == max(Rating)) %>%
+  group_by(`Company (Manufacturer)`) %>%
+  slice_head(n = 1) %>%
+  arrange(`Company (Manufacturer)`)
+```
+
+
+#### Most Recent Years Analysis
+
+##### 2023 Highest Rated Chocolate Bar(s)
+
+```{r}
+cacao_df %>%
+  select(`Specific Bean Origin or Bar Name`, `Review Date`, Rating, `Company (Manufacturer)`, `Country of Bean Origin`) %>%
+  filter((`Review Date`==max(`Review Date`)) & (Rating==max(Rating)))
+```
+
+
+##### 2023 Lowest Rated Chocolate Bar(s)
+
+```{r}
+cacao_df %>%
+  select(`Specific Bean Origin or Bar Name`, `Review Date`, Rating, `Company (Manufacturer)`, `Country of Bean Origin`) %>%
+  filter(`Review Date`==max(`Review Date`)) %>%
+  filter(Rating==min(Rating))
+```
+
+
+##### Characteristics of 2023 Highest-Rated Bars
+
+```{r}
+cacao_df %>%
+  select(`Specific Bean Origin or Bar Name`, `Most Memorable Characteristics`, Rating) %>%
+  filter(Rating== max(Rating)) %>%
+  group_by(`Specific Bean Origin or Bar Name`) %>%
+  arrange(`Specific Bean Origin or Bar Name`, `Most Memorable Characteristics`) %>%
+  group_by(`Most Memorable Characteristics`) %>%
+  separate_longer_delim(c(`Most Memorable Characteristics`), delim=",") %>%
+  select(`Most Memorable Characteristics`) %>%
+  summarize(count=n()) %>%
+  arrange(desc(count)) 
+```
+
+
+##### Characteristics of 2023 Lowest-Rated Bars
+
+```{r}
+cacao_df %>%
+  select(`Specific Bean Origin or Bar Name`, `Most Memorable Characteristics`, Rating) %>%
+  filter(Rating == min(Rating)) %>%
+  group_by(`Specific Bean Origin or Bar Name`) %>%
+  arrange(`Specific Bean Origin or Bar Name`, `Most Memorable Characteristics`) %>%
+  group_by(`Most Memorable Characteristics`) %>%
+  separate_longer_delim(c(`Most Memorable Characteristics`), delim=",") %>%
+  select(`Most Memorable Characteristics`) %>%
+  summarize(count=n()) %>%
+  arrange(desc(count))
+```
+
+
+### Step 4: Visualization
+
+```{r, echo=FALSE, warning=FALSE}
+cacao_df %>%
+  select(Rating) %>%
+  group_by(Rating) %>%
+  summarise(TotalCount=n()) %>%
+    ggplot(aes(x=Rating, y=TotalCount))+
+      geom_col(fill="brown4") +
+      theme(axis.title.x=element_blank()) +
+      ylab("Count") +
+      ggtitle("Total Count by Rating")
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+cacao_df %>%
+  select(Ingredients) %>%
+  group_by(Ingredients) %>%
+  separate_longer_delim(c(Ingredients), delim=",") %>%
+  summarise(TotalCount=n()) %>%
+  arrange(desc(TotalCount)) %>%
+  mutate(percentage=round((TotalCount*100/sum(TotalCount)), 2)) %>% 
+  mutate(y_pos = cumsum(percentage)-0.5*percentage) %>%
+    ggplot(aes(x="", percentage, fill=Ingredients))+
+    ggtitle("Percentage of Ingredients Total") +
+    geom_bar(width = 1, stat = "identity", color= "white", alpha=.5)+
+    coord_polar("y", start=0)+
+    scale_fill_manual(values=rainbow(9))+ 
+    theme_void() 
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+cacao_df %>%
+  select(`Specific Bean Origin or Bar Name`, `Most Memorable Characteristics`, Rating) %>%
+  filter(Rating== max(Rating)) %>%
+  group_by(`Specific Bean Origin or Bar Name`) %>%
+  arrange(`Specific Bean Origin or Bar Name`, `Most Memorable Characteristics`) %>%
+  group_by(`Most Memorable Characteristics`) %>%
+  separate_longer_delim(c(`Most Memorable Characteristics`), delim=",") %>%
+  select(`Most Memorable Characteristics`) %>%
+  summarize(count=n()) %>%
+  arrange(desc(count)) %>%
+    wordcloud2(shape="circle") %>%
+    htmlwidgets::prependContent(htmltools::tags$h2("Most Memorable Characteristics of 4-Rated Chocolate Bars"))
+```
+
+
