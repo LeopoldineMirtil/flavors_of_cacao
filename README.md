@@ -24,6 +24,23 @@ nearly 2,700 dark chocolate bars.
 
 #### Load Library
 
+``` r
+#for data manipulation
+library(dplyr)
+library(lubridate)
+library(tidyr)
+library(tidyverse)
+library(readxl)
+
+#for visualizations
+library(ggplot2)
+library(RColorBrewer)
+library(wordcloud2)
+
+#for documentation/markdown
+library(knitr)
+```
+
 #### Import Data
 
 ### Step 2 - Clean & Inspect Data
@@ -445,4 +462,3 @@ cacao_df %>%
 ![](Flavors-of-Cacao-Report_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
 
 ![](Flavors-of-Cacao-Report_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
-
