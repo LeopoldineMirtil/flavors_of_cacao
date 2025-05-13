@@ -24,6 +24,23 @@ nearly 2,700 dark chocolate bars.
 
 #### Load Library
 
+``` r
+#for data manipulation
+library(dplyr)
+library(lubridate)
+library(tidyr)
+library(tidyverse)
+library(readxl)
+
+#for visualizations
+library(ggplot2)
+library(RColorBrewer)
+library(wordcloud2)
+
+#for documentation/markdown
+library(knitr)
+```
+
 #### Import Data
 
 ### Step 2 - Clean & Inspect Data
