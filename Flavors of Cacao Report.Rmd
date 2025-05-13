@@ -26,7 +26,7 @@ The data used in this analysis is from the "Flavors of Cacao" database, made pub
 
 #### Load Library
 
-```{r, message=FALSE, echo=FALSE, warning=FALSE}
+```{r, message=FALSE, warning=FALSE}
 #for data manipulation
 library(dplyr)
 library(lubridate)
